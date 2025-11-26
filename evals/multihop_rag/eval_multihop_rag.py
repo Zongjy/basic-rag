@@ -6,10 +6,10 @@ This script:
 2. Chunks the corpus body field, with title+metadata as a separate chunk
 3. Builds a FAISS index for semantic search
 4. Searches for relevant chunks using queries
-5. Saves three output files:
+5. Saves output files in TaoTie format:
    - chunks.jsonl: All document chunks
    - index files: FAISS index and chunk_id mapping
-   - queries.jsonl: Queries with their relevant chunks
+   - multihop_rag.jsonl: Queries in TaoTie format (id, question, answer, contexts)
 """
 
 import json
@@ -303,13 +303,13 @@ class MultiHopRAGEvaluator:
 
     def search_queries(self, queries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Search for relevant chunks for each query.
+        Search for relevant chunks for each query and convert to TaoTie format.
 
         Args:
             queries: List of query dictionaries
 
         Returns:
-            List of query dictionaries with retrieved chunks
+            List of query dictionaries in TaoTie format
         """
         if self.retriever is None:
             raise RuntimeError("Index not built. Call build_index first.")
@@ -327,36 +327,50 @@ class MultiHopRAGEvaluator:
                 return_scores=True
             )
 
-            # Add retrieved chunks to query
-            query_result = {
-                **query,
-                "retrieved_chunks": retrieved
+            # Convert to TaoTie format
+            contexts = []
+            for i, chunk in enumerate(retrieved, 1):
+                # Format each chunk as "Passage X:\n{text}"
+                passage_text = f"Passage {i}:\n{chunk['text']}"
+                contexts.append(passage_text)
+
+            # Calculate total context length
+            total_length = sum(len(ctx) for ctx in contexts)
+
+            # Build TaoTie format entry
+            taotie_entry = {
+                "id": query["query_id"],
+                "num_ctxs": len(contexts),
+                "length": total_length,
+                "question": query["query"],
+                "answer": [query["answer"]] if isinstance(query["answer"], str) else query["answer"],
+                "contexts": contexts
             }
 
-            results.append(query_result)
+            results.append(taotie_entry)
 
         return results
 
     def save_queries(
         self,
         query_results: List[Dict[str, Any]],
-        filename: str = "queries.jsonl"
+        filename: str = "multihop_rag.jsonl"
     ):
         """
-        Save queries with retrieved chunks to JSONL file.
+        Save queries in TaoTie format to JSONL file.
 
         Args:
-            query_results: List of query result dictionaries
-            filename: Output filename
+            query_results: List of query result dictionaries in TaoTie format
+            filename: Output filename (default: multihop_rag.jsonl for TaoTie)
         """
         output_path = self.output_dir / filename
-        print(f"Saving query results to {output_path}...")
+        print(f"Saving TaoTie format queries to {output_path}...")
 
         with open(output_path, "w", encoding="utf-8") as f:
             for result in query_results:
                 f.write(json.dumps(result, ensure_ascii=False) + "\n")
 
-        print(f"Saved {len(query_results)} query results")
+        print(f"Saved {len(query_results)} queries in TaoTie format")
 
     def run_evaluation(self):
         """Run complete evaluation pipeline."""
@@ -413,7 +427,8 @@ class MultiHopRAGEvaluator:
         print(f"  - {self.output_dir}/index.faiss")
         print(f"  - {self.output_dir}/index.faiss.meta")
         print(f"  - {self.output_dir}/chunk_id_mapping.json")
-        print(f"  - {self.output_dir}/queries.jsonl")
+        print(f"  - {self.output_dir}/multihop_rag.jsonl (TaoTie format)")
+        print("\nTaoTie format includes: id, num_ctxs, length, question, answer, contexts")
 
 
 def main():
