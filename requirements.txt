@@ -1,0 +1,14 @@
+# Core dependencies
+numpy>=1.24.0
+faiss-cpu>=1.7.4  # or faiss-gpu for GPU support
+
+# HTTP client for API calls
+aiohttp>=3.9.0
+requests>=2.31.0
+
+# Text processing
+tiktoken>=0.5.0  # for token counting (OpenAI tokenizer)
+
+# Utilities
+tqdm>=4.66.0
+datasets==3.6.0

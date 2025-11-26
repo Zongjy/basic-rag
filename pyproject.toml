@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "basic-rag"
+version = "0.1.0"
+description = "A basic RAG system with chunking, embedding, and vector retrieval"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Your Name" }]
+license = { text = "MIT" }
+dynamic = ["dependencies"]
+
+[tool.setuptools.packages.find]
+include = ["basic_rag*"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
+[project.optional-dependencies]
+dev = ["black", "pytest", "ipython"]
+
+[tool.black]
+line-length = 100
+target-version = ['py310', 'py311', 'py312']
